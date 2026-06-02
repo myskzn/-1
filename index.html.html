@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, shrink-to-fit=yes">
+    <title>豪士工厂 · 面包王国冒险谭</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            background:#2d2a26; display:flex; justify-content:center; align-items:center;
+            min-height:100vh; font-family:'Segoe UI','Noto Sans',sans-serif; padding:12px;
+        }
+        #game {
+            width:100%; max-width:420px; background:#fef9e7; border-radius:32px !important;
+            box-shadow:0 20px 40px rgba(0,0,0,0.5),0 0 0 4px #f3b33d; overflow:hidden !important;
+            display:flex; flex-direction:column; position:relative; height:85vh; max-height:750px;
+        }
+        #haoshi-logo { position:absolute; top:15px; left:15px; width:100px; height:auto; z-index:55; }
+        #scene {
+            flex:1; background:#ffeed9; position:relative; display:flex;
+            align-items:center; justify-content:center; overflow:hidden !important;
+            border-bottom:3px dashed #d49c3d; border-radius:28px 28px 0 0 !important;
+        }
+        #bg {
+            width:100%; height:100%; object-fit:contain; display:block; padding:20px;
+            border-radius:28px !important; opacity:0; transform:scale(0.92);
+            transition:all 1.2s cubic-bezier(0.25,0.8,0.25,1);
+        }
+        #bg.show { opacity:1; transform:scale(1); }
+        #bg.anim-fade-up { transition:none; animation:anim-fade-up 1.2s ease forwards; }
+        #bg.anim-fade-zoom { transition:none; animation:anim-fade-zoom 1.3s ease forwards; }
+        #bg.anim-slide-left { transition:none; animation:anim-slide-left 1.2s ease forwards; }
+        #bg.anim-glow { transition:none; animation:anim-glow 1.4s ease forwards; }
+        #bg.anim-shake { transition:none; animation:anim-shake 1.1s ease forwards; }
+        #bg.anim-end { transition:none; animation:anim-end 1.5s ease forwards; }
+        #bg.anim-fade-in { transition:none; animation:anim-fade-in 1.2s ease forwards; }
+        #bg.anim-slide-up { transition:none; animation:anim-slide-up 1.2s ease forwards; }
+        #bg.anim-zoom-in { transition:none; animation:anim-zoom-in 1.3s ease forwards; }
+        @keyframes anim-fade-up { 0%{opacity:0;transform:translateY(40px);}100%{opacity:1;transform:translateY(0);} }
+        @keyframes anim-fade-zoom { 0%{opacity:0;transform:scale(0.7);}100%{opacity:1;transform:scale(1);} }
+        @keyframes anim-slide-left { 0%{opacity:0;transform:translateX(-50px);}100%{opacity:1;transform:translateX(0);} }
+        @keyframes anim-glow { 0%{opacity:0;filter:brightness(0.4);}100%{opacity:1;filter:brightness(1);} }
+        @keyframes anim-shake {
+            0%{opacity:0;transform:translateX(0);}20%{transform:translateX(-6px);}
+            40%{transform:translateX(6px);}60%{transform:translateX(-3px);}
+            80%{transform:translateX(3px);}100%{opacity:1;transform:translateX(0);}
+        }
+        @keyframes anim-end {
+            0%{opacity:0;transform:scale(0.8) rotate(-4deg);}50%{transform:scale(1.05) rotate(1deg);}
+            100%{opacity:1;transform:scale(1) rotate(0);}
+        }
+        @keyframes anim-fade-in { 0%{opacity:0;}100%{opacity:1;} }
+        @keyframes anim-slide-up { 0%{opacity:0;transform:translateY(30px);}100%{opacity:1;transform:translateY(0);} }
+        @keyframes anim-zoom-in { 0%{opacity:0;transform:scale(0.8);}100%{opacity:1;transform:scale(1);} }
+        #char {
+            height:120px; max-width:100px; object-fit:contain;
+            filter:drop-shadow(0 8px 6px rgba(0,0,0,0.25)); z-index:15; pointer-events:auto;
+            cursor:pointer; flex-shrink:0; border-radius:20px !important; overflow:hidden !important;
+            opacity:1; transform:scale(1) translateY(0);
+        }
+        #char:active { transform:scale(0.9); }
+        #easter-egg-toast {
+            position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+            background:rgba(0,0,0,0.85); color:#ffd700; padding:10px 20px; border-radius:20px;
+            font-weight:bold; z-index:30; pointer-events:none; opacity:0;
+            transition:opacity 0.3s; font-size:0.9rem;
+        }
+        #minigame-overlay {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.8); z-index:45; display:none; flex-direction:column;
+            align-items:center; justify-content:center; gap:15px;
+            border-radius:28px !important; overflow:hidden !important;
+        }
+        #minigame-target {
+            width:80px; height:80px; background:#ff4444; border-radius:50%;
+            cursor:pointer; transition:transform 0.15s; animation:target-bounce 0.6s infinite alternate;
+            display:flex; align-items:center; justify-content:center; font-size:2rem;
+        }
+        @keyframes target-bounce { 0%{transform:scale(1);}100%{transform:scale(1.3);} }
+        #minigame-timer { color:#ffd700; font-size:1.5rem; font-weight:bold; }
+        #minigame-score { color:#fff; font-size:1rem; }
+        #collect-badge {
+            position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.7);
+            color:#ffd700; padding:6px 12px; border-radius:15px; z-index:25;
+            font-weight:bold; font-size:0.85rem; display:none; pointer-events:none;
+        }
+        #bottom {
+            background:#fff5e6; padding:10px 12px; display:flex; flex-direction:row;
+            align-items:center; justify-content:flex-start; gap:10px;
+            border-radius:0 0 28px 28px !important; overflow:hidden !important;
+        }
+        #dialogue {
+            flex:1; background:#3e2e1f; color:#fef3d4; padding:14px 16px;
+            border-radius:24px; cursor:pointer; user-select:none;
+            border:2px solid #ffb347; box-shadow:0 6px 0 #8b5a2b;
+            transition:all 0.1s ease; line-height:1.5; z-index:20;
+        }
+        #dialogue:active { transform:translateY(3px); box-shadow:0 2px 0 #8b5a2b; }
+        #name { color:#ffb85c; font-weight:bold; font-size:1.1rem; letter-spacing:1px; display:block; margin-bottom:4px; }
+        #text { font-size:0.9rem; white-space:pre-wrap; word-break:break-word; }
+        #choices {
+            position:absolute; bottom:20px; left:20px; right:20px;
+            background:rgba(30,20,10,0.95); backdrop-filter:blur(12px);
+            border-radius:28px; padding:20px 12px; display:none; flex-direction:column;
+            gap:12px; z-index:40; border:2px solid #f3b33d;
+            box-shadow:0 10px 25px black; max-height:60vh; overflow-y:auto;
+        }
+        .btn {
+            background:#fbb03b; border:none; padding:14px 18px; border-radius:40px;
+            font-weight:bold; font-size:1rem; color:#2d1c0b; box-shadow:0 5px 0 #b45f1a;
+            cursor:pointer; transition:0.1s linear; text-align:center;
+            letter-spacing:0.5px; border:1px solid #ffd58c;
+        }
+        .btn:active { transform:translateY(4px); box-shadow:0 1px 0 #b45f1a; }
+        .shake { animation:shake 0.4s ease-in-out; }
+        @keyframes shake {
+            0%{transform:translate(2px,2px);}25%{transform:translate(-4px,-1px);}
+            50%{transform:translate(3px,-2px);}75%{transform:translate(-2px,1px);}
+            100%{transform:translate(0,0);}
+        }
+        #start-screen {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background:linear-gradient(180deg, #2c1810 0%, #4a2c17 30%, #6b3a1f 60%, #8b4513 100%);
+            display:flex; flex-direction:column; align-items:center; justify-content:center;
+            z-index:50; border-radius:30px !important; overflow:hidden !important;
+        }
+        #start-screen .stars { position:absolute; width:100%; height:100%; pointer-events:none; }
+        #start-screen .star {
+            position:absolute; background:#ffd700; border-radius:50%;
+            animation:twinkle 2s infinite alternate;
+        }
+        @keyframes twinkle { 0%{opacity:0.3;transform:scale(0.8);}100%{opacity:1;transform:scale(1.2);} }
+        @keyframes float { 0%{transform:translateY(0);}50%{transform:translateY(-12px);}100%{transform:translateY(0);} }
+        @keyframes glow { 0%{text-shadow:0 0 10px #ffb347;}50%{text-shadow:0 0 20px #ffb347;}100%{text-shadow:0 0 10px #ffb347;} }
+        @keyframes pulse {
+            0%{transform:scale(1);box-shadow:0 8px 0 #8b4513,0 0 20px rgba(255,153,0,0.4);}
+            50%{transform:scale(1.05);box-shadow:0 8px 0 #8b4513,0 0 35px rgba(255,153,0,0.7);}
+            100%{transform:scale(1);box-shadow:0 8px 0 #8b4513,0 0 20px rgba(255,153,0,0.4);}
+        }
+        #start-screen .title-area { position:relative; z-index:2; text-align:center; padding:0 20px; }
+        #start-screen .icon-row { font-size:3rem; animation:float 3s ease-in-out infinite; margin-bottom:10px; }
+        #start-screen h1 {
+            font-size:2rem; color:#ffd700; font-weight:bold; letter-spacing:3px;
+            animation:glow 2s ease-in-out infinite; margin-bottom:8px;
+            font-family:'Georgia','Noto Serif',serif;
+        }
+        #start-screen .subtitle { font-size:0.9rem; color:#ffcc80; letter-spacing:2px; margin-bottom:20px; opacity:0.9; }
+        #start-screen .decoration { font-size:1.2rem; color:#ffb347; letter-spacing:8px; margin-bottom:25px; }
+        #start-btn, #gallery-btn {
+            position:relative; z-index:2;
+            background:linear-gradient(180deg, #ff9900 0%, #e67300 100%);
+            border:3px solid #ffd700; padding:16px 0; width:240px;
+            border-radius:50px; font-weight:bold; font-size:1.2rem;
+            color:#2d1c0b; box-shadow:0 8px 0 #8b4513,0 0 20px rgba(255,153,0,0.4);
+            cursor:pointer; letter-spacing:3px; animation:pulse 2s ease-in-out infinite;
+            transition:all 0.15s ease; margin:6px 0; text-align:center;
+        }
+        #start-btn:active, #gallery-btn:active { transform:translateY(6px); box-shadow:0 2px 0 #8b4513; animation:none; }
+        #gallery-btn.disabled {
+            background:#999 !important; border-color:#666 !important;
+            box-shadow:0 8px 0 #666 !important; color:#ccc !important;
+            cursor:not-allowed !important; animation:none !important; opacity:0.6;
+        }
+        #start-screen .footer-text { position:relative; z-index:2; margin-top:30px; font-size:0.7rem; color:#a08060; letter-spacing:2px; }
+        #start-screen .bread-deco { position:absolute; font-size:2rem; opacity:0.6; pointer-events:none; }
+        img { border-radius:20px !important; }
+        #gallery-overlay {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.9); z-index:60; display:none;
+            flex-direction:column; align-items:center; padding:20px;
+            border-radius:30px; overflow-y:auto;
+        }
+        #gallery-close {
+            position:absolute; top:20px; right:20px; background:#ff4444;
+            color:white; border:none; width:40px; height:40px; border-radius:50%;
+            font-size:1.2rem; cursor:pointer; z-index:65;
+        }
+        .gallery-grid {
+            display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+            width:100%; max-width:350px; margin-top:60px;
+        }
+        .gallery-btn-item {
+            background:#fbb03b; border:2px solid #ffd700; padding:12px 8px;
+            border-radius:16px; font-weight:bold; font-size:0.85rem;
+            color:#2d1c0b; cursor:pointer; text-align:center;
+        }
+        .gallery-btn-item.locked {
+            background:#777; border-color:#555; color:#ccc;
+            cursor:not-allowed; opacity:0.6;
+        }
+        #ending-detail {
+            position:absolute; top:0; left:0; width:100%; height:100%;
+            background:rgba(0,0,0,0.95); z-index:70; display:none;
+            flex-direction:column; align-items:center; justify-content:center;
+            padding:20px; border-radius:30px;
+        }
+        #ending-detail-img {
+            width:90%; max-width:320px; height:auto;
+            border:3px solid #ffd700; border-radius:16px; margin-bottom:16px;
+        }
+        #ending-detail-desc { color:#fff; font-size:1rem; text-align:center; line-height:1.6; max-width:350px; padding:0 10px; }
+        #ending-detail-close {
+            margin-top:20px; padding:10px 25px; background:#ffd700;
+            color:#2d1c0b; border:none; border-radius:20px; font-weight:bold; cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+<div id="game">
+    <img id="haoshi-logo" src="haoshi-logo.png" alt="豪士面包logo">
+    <div id="start-screen">
+        <div class="stars" id="stars-container"></div>
+        <div class="bread-deco" style="top:10%;left:8%;animation:float 4s infinite;">🥐</div>
+        <div class="bread-deco" style="top:8%;right:10%;animation:float 3.5s infinite 0.5s;">🍞</div>
+        <div class="bread-deco" style="bottom:20%;left:12%;animation:float 4.5s infinite 1s;">🥖</div>
+        <div class="bread-deco" style="bottom:15%;right:8%;animation:float 3.8s infinite 0.8s;">🥨</div>
+        <div class="title-area">
+            <div class="icon-row">🏰🍞✨</div>
+            <h1>面包王国冒险谭</h1>
+            <div class="subtitle">～ 豪士工厂奇幻之旅 ～</div>
+            <div class="decoration">◆ ◇ ◆</div>
+            <button id="start-btn">⚔️ 开始冒险 ⚔️</button>
+            <button id="gallery-btn" class="disabled">📖 结局图鉴</button>
+            <div class="footer-text">一场关于面包与勇气的童话</div>
+        </div>
+    </div>
+    <div id="gallery-overlay">
+        <button id="gallery-close">✕</button>
+        <div class="gallery-grid">
+            <div class="gallery-btn-item locked" data-ending="master">面包工艺大师</div>
+            <div class="gallery-btn-item locked" data-ending="rich">面包宝藏收藏家</div>
+            <div class="gallery-btn-item locked" data-ending="normal">透明工厂游记</div>
+            <div class="gallery-btn-item locked" data-ending="eat">贪食者的遗憾</div>
+            <div class="gallery-btn-item locked" data-ending="raw">食材守护者的失信</div>
+            <div class="gallery-btn-item locked" data-ending="mix">混乱的搅拌师</div>
+            <div class="gallery-btn-item locked" data-ending="fer">急躁的破坏者</div>
+            <div class="gallery-btn-item locked" data-ending="bake">失温的烘焙师</div>
+            <div class="gallery-btn-item locked" data-ending="cool">不洁的触碰</div>
+            <div class="gallery-btn-item locked" data-ending="store">贪婪的暴食者</div>
+            <div class="gallery-btn-item locked" data-ending="minigame">失控的火焰</div>
+        </div>
+    </div>
+    <div id="ending-detail">
+        <img id="ending-detail-img" src="" alt="结局">
+        <p id="ending-detail-desc"></p>
+        <button id="ending-detail-close" class="btn">关闭查看</button>
+    </div>
+    <div id="scene">
+        <img id="bg" src="" alt="场景">
+        <div id="easter-egg-toast"></div>
+        <div id="collect-badge">🪙 0</div>
+    </div>
+    <div id="bottom">
+        <img id="char" src="" alt="角色">
+        <div id="dialogue"><span id="name"></span><span id="text"></span></div>
+    </div>
+    <div id="choices"></div>
+    <div id="minigame-overlay">
+        <div id="minigame-timer">⏱ 5</div>
+        <div id="minigame-target">🔥</div>
+        <div id="minigame-score">点击灭火！</div>
+    </div>
+</div>
+<script>
+(function() {
+    function createStars() {
+        const c = document.getElementById('stars-container');
+        if(!c)return;
+        for(let i=0;i<40;i++){
+            const s=document.createElement('div');
+            s.className='star';
+            const sz=Math.random()*3+1;
+            s.style.width=sz+'px';s.style.height=sz+'px';
+            s.style.left=Math.random()*100+'%';s.style.top=Math.random()*100+'%';
+            s.style.animationDelay=Math.random()*2+'s';
+            s.style.animationDuration=(Math.random()*2+1.5)+'s';
+            c.appendChild(s);
+        }
+    }
+    createStars();
+
+    function svgToDataURI(s){
+        try{return'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);}catch(e){return'';}
+    }
+
+    const rawSVG={
+        haoshi_bread_pack:"haoshi_bread_pack.png",scan_qrcode:"扫码.png",phone_scan:"扫码.png",factory_pixel:"手机内部.png",
+        bg_raw:"原料.png",bg_mix:"调和.png",bg_ferment:"发酵.png",bg_form:"塑形.png",bg_bake:"炙烤.png",bg_cool:"冷却.png",bg_metal:"质检.png",bg_pack:"包装.png",bg_storage:"仓库.png",
+        face_shock:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="30" y="30" width="10" height="10" fill="#000"/><rect x="60" y="30" width="10" height="10" fill="#000"/><rect x="40" y="60" width="20" height="15" fill="#000"/></svg>`,
+        face_cool:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="25" y="35" width="20" height="6" fill="#000"/><rect x="55" y="35" width="20" height="6" fill="#000"/><rect x="40" y="65" width="20" height="6" fill="#000"/></svg>`,
+        face_dizzy:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="30" y="30" width="10" height="10" fill="#ff9800"/><rect x="60" y="30" width="10" height="10" fill="#ff9800"/></svg>`,
+        face_sweat:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="30" y="30" width="10" height="10" fill="#000"/><rect x="60" y="30" width="10" height="10" fill="#000"/><rect x="70" y="40" width="6" height="12" fill="#4fc3f7"/></svg>`,
+        face_angry:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="30" y="30" width="15" height="6" fill="#000"/><rect x="55" y="30" width="15" height="6" fill="#000"/><rect x="40" y="60" width="20" height="6" fill="#000"/></svg>`,
+        face_happy:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f9e7b5"/><rect x="30" y="30" width="10" height="10" fill="#000"/><rect x="60" y="30" width="10" height="10" fill="#000"/><rect x="35" y="60" width="30" height="8" fill="#000"/></svg>`
+    };
+
+    const IMG={};
+    for(let k in rawSVG){
+        if(rawSVG[k].endsWith('.png')||rawSVG[k].endsWith('.jpg')||rawSVG[k].endsWith('.jpeg')){IMG[k]=rawSVG[k];}
+        else{IMG[k]=svgToDataURI(rawSVG[k]);}
+    }
+
+    const endingDetails={
+        master:{img:"真结局.png",desc:"【面包工艺大师】\n你完美守护了豪士的每一道工艺，成为面包王国的至高守护者！\n解锁条件：善良值≥15"},
+        rich:{img:"特殊结局.png",desc:"【面包宝藏收藏家】\n你收集了无数面包金币，成为王国最富有的冒险者！\n解锁条件：金币≥5"},
+        normal:{img:"普通结局.png",desc:"【透明工厂游记】\n你体验了一场梦幻的豪士面包诞生之旅。\n解锁条件：完成所有流程且未达成其他结局"},
+        eat:{img:"贪食结局.png",desc:"【贪食者的遗憾】\n你错过了一整个神奇的面包魔法世界。\n解锁条件：开局选择直接撕开吃掉面包"},
+        raw:{img:"失信.png",desc:"【食材守护者的失信】\n你破坏了食材纯净，面包王国不再为你敞开大门。\n解锁条件：原料环节选择偷偷尝面粉"},
+        mix:{img:"混乱搅拌.png",desc:"【混乱的搅拌师】\n你随意破坏工序，黄金面团的魔法彻底消散。\n解锁条件：搅拌环节选择乱搅一通"},
+        fer:{img:"破坏.png",desc:"【急躁的破坏者】\n你惊扰了发酵魔法，面包的灵魂永远沉睡。\n解锁条件：发酵环节选择叫醒面团"},
+        bake:{img:"失温.png",desc:"【失温的烘焙师】\n你放弃守护火候，所有面包都在黑暗中烤焦。\n解锁条件：烘烤环节选择交给机器或放弃"},
+        cool:{img:"洁癖.png",desc:"【不洁的触碰】\n你破坏了无菌洁净，美味在诞生前就已变质。\n解锁条件：冷却环节选择吹口气降温"},
+        store:{img:"贪婪.png",desc:"【贪婪的暴食者】\n你只想占有美味，被面包王国永久驱逐。\n解锁条件：仓库环节选择吃光所有面包"},
+        minigame:{img:"失控.png",desc:"【失控的火焰】\n你没能掌控火候，面包在烈焰中化为灰烬。\n解锁条件：烘烤小游戏失败"}
+    };
+
+    let unlockedEndings = new Set();
+    try {
+        const saved = localStorage.getItem('unlockedEndings');
+        if(saved) unlockedEndings = new Set(JSON.parse(saved));
+    } catch(e) { console.warn('读取结局记录失败'); }
+
+    let state={kindness:0,weirdness:0,coins:0};
+    let currentNode="start";
+    let nodeHistory = [];
+    let gameStarted=false;
+    let animatedImages = new Set();
+    let dialogueClicked = false;
+
+    const bgImg=document.getElementById('bg');
+    const charImg=document.getElementById('char');
+    const nameSpan=document.getElementById('name');
+    const textSpan=document.getElementById('text');
+    const choicesDiv=document.getElementById('choices');
+    const dialogueBox=document.getElementById('dialogue');
+    const startScreen=document.getElementById('start-screen');
+    const easterEggToast=document.getElementById('easter-egg-toast');
+    const collectBadge=document.getElementById('collect-badge');
+    const minigameOverlay=document.getElementById('minigame-overlay');
+    const galleryBtn=document.getElementById('gallery-btn');
+    const galleryOverlay=document.getElementById('gallery-overlay');
+    const galleryClose=document.getElementById('gallery-close');
+    const endingDetail=document.getElementById('ending-detail');
+    const endingDetailImg=document.getElementById('ending-detail-img');
+    const endingDetailDesc=document.getElementById('ending-detail-desc');
+    const endingDetailClose=document.getElementById('ending-detail-close');
+    const minigameTimer = document.getElementById('minigame-timer');
+    const minigameScore = document.getElementById('minigame-score');
+    const minigameTarget = document.getElementById('minigame-target');
+
+    function unlockEnding(type){
+        if(!unlockedEndings.has(type)){
+            unlockedEndings.add(type);
+            localStorage.setItem('unlockedEndings', JSON.stringify(Array.from(unlockedEndings)));
+        }
+        updateGalleryStatus();
+    }
+
+    function updateGalleryStatus(){
+        if(unlockedEndings.size > 0){
+            galleryBtn.classList.remove('disabled');
+        } else {
+            galleryBtn.classList.add('disabled');
+        }
+        document.querySelectorAll('.gallery-btn-item').forEach(item => {
+            const ending = item.dataset.ending;
+            if(unlockedEndings.has(ending)){
+                item.classList.remove('locked');
+            } else {
+                item.classList.add('locked');
+            }
+        });
+    }
+
+    function openGallery() {
+        galleryOverlay.style.display = 'flex';
+    }
+
+    const easterEggs=["别戳我！我只是个像素面团！","哎呀，好痒！","你戳到我的笑点了！","再戳我就生气了哦～","我可是有尊严的面包！","戳戳戳，你开心就好~","其实我在憋笑…噗！","第几次了？我给你数着呢！"];
+    let easterClickCount=0;
+    charImg.addEventListener('click',function(e){
+        e.stopPropagation();
+        if(!gameStarted)return;
+        easterClickCount++;
+        const msg=easterEggs[Math.floor(Math.random()*easterEggs.length)];
+        showToast(msg);
+        if(easterClickCount===5){
+            state.coins++;
+            updateCoinDisplay();
+            showToast("🎉 发现隐藏面包金币！+1 🪙");
+            easterClickCount=0;
+            if(state.coins >=5) unlockEnding('rich');
+        }
+    });
+
+    function showToast(msg){
+        easterEggToast.textContent=msg;
+        easterEggToast.style.opacity='1';
+        clearTimeout(easterEggToast._timeout);
+        easterEggToast._timeout=setTimeout(()=>{easterEggToast.style.opacity='0';},2000);
+    }
+
+    function updateCoinDisplay(){
+        collectBadge.textContent='🪙 '+state.coins;
+        collectBadge.style.display=state.coins>0?'block':'none';
+    }
+
+    let miniGameResolve=null;
+    function startMiniGame(){
+        return new Promise((resolve)=>{
+            miniGameResolve=resolve;
+            let timeLeft=5;
+            let clicks=0;
+            const targetClicks=3;
+            minigameOverlay.style.display='flex';
+            minigameTimer.textContent='⏱ '+timeLeft;
+            minigameScore.textContent='点击控制火候！ 0/'+targetClicks;
+            minigameTarget.style.background='#ff4444';
+            minigameTarget.textContent='🔥';
+            const interval=setInterval(()=>{
+                timeLeft--;
+                minigameTimer.textContent='⏱ '+timeLeft;
+                if(timeLeft<=0){
+                    clearInterval(interval);
+                    minigameOverlay.style.display='none';
+                    unlockEnding('minigame');
+                    resolve(false);
+                }
+            },1000);
+            minigameTarget.onclick=()=>{
+                clicks++;
+                minigameScore.textContent='点击控制火候！ '+clicks+'/'+targetClicks;
+                minigameTarget.style.transform='scale(0.7)';
+                setTimeout(()=>{minigameTarget.style.transform='';},100);
+                if(clicks>=targetClicks){
+                    clearInterval(interval);
+                    minigameTarget.style.background='#44ff44';
+                    minigameTarget.textContent='✅';
+                    minigameScore.textContent='火候完美！';
+                    setTimeout(()=>{
+                        minigameOverlay.style.display='none';
+                        resolve(true);
+                    },600);
+                }
+            };
+        });
+    }
+
+    function playAnim(nodeId, bgSrc){
+        if(animatedImages.has(bgSrc)){
+            bgImg.removeAttribute('class');
+            bgImg.style.opacity = 1;
+            bgImg.style.transform = 'scale(1)';
+            return;
+        }
+        bgImg.removeAttribute('class');
+        let anim='anim-fade-zoom';
+        if(nodeId === 'start') anim='anim-fade-in';
+        else if(nodeId === 'scene_scan') anim='anim-slide-left';
+        else if(nodeId === 'scene_surprise') anim='anim-shake';
+        else if(nodeId.includes('raw')||nodeId.includes('原料')) anim='anim-fade-up';
+        else if(nodeId.includes('mix')||nodeId.includes('调和')) anim='anim-slide-up';
+        else if(nodeId.includes('ferment')||nodeId.includes('发酵')) anim='anim-slide-left';
+        else if(nodeId.includes('form')||nodeId.includes('塑形')) anim='anim-zoom-in';
+        else if(nodeId.includes('bake')||nodeId.includes('炙烤')) anim='anim-glow';
+        else if(nodeId.includes('cool')||nodeId.includes('冷却')) anim='anim-fade-zoom';
+        else if(nodeId.includes('metal')||nodeId.includes('质检')) anim='anim-fade-in';
+        else if(nodeId.includes('pack')||nodeId.includes('包装')) anim='anim-slide-up';
+        else if(nodeId.includes('storage')||nodeId.includes('仓库')) anim='anim-zoom-in';
+        else if(nodeId.includes('fail')||nodeId.includes('遗憾')) anim='anim-shake';
+        else if(nodeId.includes('minigame')) anim='anim-shake';
+        else if(nodeId.includes('end_')) anim='anim-end';
+        bgImg.classList.add(anim);
+        animatedImages.add(bgSrc);
+        charImg.style.opacity = 1;
+        charImg.style.transform = 'scale(1) translateY(0)';
+    }
+
+    function loadNode(nodeId){
+        choicesDiv.style.display = 'none';
+        dialogueClicked = false;
+
+        // 只记录主要选择节点，避免结局前过渡节点污染回退栈
+        if(nodeId !== 'continue' && nodeId !== 'reset' 
+           && !nodeId.startsWith('end_') && !nodeId.startsWith('fail_')
+           && !nodeId.startsWith('pre_') && !nodeId.startsWith('step_')){
+            nodeHistory.push(currentNode);
+            if(nodeHistory.length > 30) nodeHistory.shift();
+        }
+
+        currentNode = nodeId;
+        let node = storyNodes[nodeId];
+
+        if(nodeId === 'continue'){
+            if(nodeHistory.length > 0){
+                const prevNode = nodeHistory.pop();
+                loadNode(prevNode);
+            } else {
+                loadNode('start');
+            }
+            return;
+        }
+
+        if(nodeId === 'reset'){
+            state={kindness:0,weirdness:0,coins:0};
+            nodeHistory = [];
+            animatedImages.clear();
+            currentNode = 'start';
+            gameStarted = false;
+            startScreen.style.display = 'flex';
+            updateCoinDisplay();
+            return;
+        }
+
+        if(nodeId === 'minigame_bake'){
+            startMiniGame().then(success => {
+                if(success){
+                    state.kindness +=3;
+                    loadNode('scene_cool');
+                } else {
+                    loadNode('pre_fail_bake_minigame');
+                }
+            });
+            return;
+        }
+
+        if(!node) return;
+
+        if(nodeId === 'end_normal'){
+            if(state.kindness >= 15){
+                node = {...node, bg:"真结局.png", face:IMG.face_happy, name:"面包国王", text:"【面包工艺大师】\n你完美守护了豪士的每一道工艺，成为面包王国的至高守护者！"};
+            } else {
+                node = {...node, bg:"普通结局.png", face:IMG.face_cool, name:"你", text:"【透明工厂游记】\n你体验了一场梦幻的豪士面包诞生之旅。"};
+            }
+        }
+
+        bgImg.src = node.bg || '';
+        charImg.src = node.face || '';
+        playAnim(nodeId, node.bg || '');
+
+        nameSpan.textContent = node.name || '';
+        textSpan.textContent = node.text || '';
+
+        if(node.effect){
+            Object.keys(node.effect).forEach(key => {
+                state[key] += node.effect[key];
+            });
+            updateCoinDisplay();
+        }
+
+        if(node.onEnter) node.onEnter();
+
+        const isEnding = nodeId.startsWith('fail_') || nodeId.startsWith('end_');
+
+        dialogueBox.onclick = function(){
+            if(dialogueClicked) return;
+            dialogueClicked = true;
+
+            if(isEnding){
+                choicesDiv.innerHTML = '';
+                choicesDiv.style.display = 'flex';
+
+                const backBtn = document.createElement('button');
+                backBtn.className = 'btn';
+                backBtn.textContent = '🔙 回到上一剧情';
+                backBtn.onclick = function(){
+                    choicesDiv.style.display = 'none';
+                    loadNode('continue');
+                };
+
+                const restartBtn = document.createElement('button');
+                restartBtn.className = 'btn';
+                restartBtn.textContent = '🔄 重新开始冒险';
+                restartBtn.onclick = function(){
+                    choicesDiv.style.display = 'none';
+                    loadNode('reset');
+                };
+
+                const galleryBtnEnd = document.createElement('button');
+                galleryBtnEnd.className = 'btn';
+                galleryBtnEnd.textContent = '📖 查看结局图鉴';
+                galleryBtnEnd.onclick = function(){
+                    openGallery();
+                };
+
+                choicesDiv.appendChild(backBtn);
+                choicesDiv.appendChild(restartBtn);
+                choicesDiv.appendChild(galleryBtnEnd);
+            } else {
+                if(node.options && node.options.length>0){
+                    choicesDiv.innerHTML = '';
+                    choicesDiv.style.display = 'flex';
+                    node.options.forEach(option => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn';
+                        btn.textContent = option.text;
+                        btn.onclick = function(){
+                            choicesDiv.style.display = 'none';
+                            loadNode(option.next);
+                        };
+                        choicesDiv.appendChild(btn);
+                    });
+                }
+            }
+        };
+    }
+
+    const storyNodes = {
+        start:{
+            bg:IMG.haoshi_bread_pack,face:IMG.face_shock,name:"你",
+            text:"你在超市的货架上拿起一包豪士面包，包装袋上印着金黄诱人的图案。翻到背面想看看配料表，左上角一个小小的二维码引起了你的注意。",
+            options:[
+                {text:"直接撕开吃掉",next:"pre_end_eat"},
+                {text:"拿出手机扫描二维码",next:"scene_scan"}
+            ]
+        },
+        pre_end_eat:{
+            bg:IMG.haoshi_bread_pack,face:IMG.face_dizzy,name:"你",
+            text:"你忍不住撕开包装，面包的香气扑面而来。你大口咬下，甜美在口中化开... 然而，世界似乎什么都没有发生。",
+            options:[
+                {text:"这就完了？",next:"end_eat"}
+            ]
+        },
+        end_eat:{
+            bg:"贪食结局.png",face:IMG.face_dizzy,name:"遗憾结局",
+            text:"【贪食者的遗憾】\n你错过了一整个神奇的面包魔法世界。",
+            onEnter:()=>unlockEnding('eat')
+        },
+        scene_scan:{
+            bg:IMG.phone_scan,face:IMG.face_cool,name:"你",
+            text:"你掏出手机对准二维码，绿色扫描框锁定目标，屏幕显示正在连接豪士透明工厂…",
+            options:[{text:"等待加载...",next:"scene_surprise"}]
+        },
+        scene_surprise:{
+            bg:IMG.factory_pixel,face:IMG.face_shock,name:"你",
+            text:"天哪！手机屏幕里竟然不是网页，而是一个微型工厂！里面的小面包还在动！",
+            options:[{text:"进入工厂开始冒险",next:"scene_raw"}],
+            onEnter:()=>{document.getElementById('scene').classList.add('shake');setTimeout(()=>document.getElementById('scene').classList.remove('shake'),500);}
+        },
+        scene_raw:{
+            bg:IMG.bg_raw,face:IMG.face_cool,name:"原料长老",
+            text:"欢迎来到原料圣殿！我是守护食材的长老，所有原料都必须纯净无瑕。",
+            options:[
+                {text:"我会认真监督每一份食材",next:"raw_kind",effect:{kindness:2}},
+                {text:"食材看起来都很新鲜呀",next:"raw_normal"},
+                {text:"我可以偷偷尝一口面粉吗",next:"pre_fail_raw",effect:{weirdness:1}}
+            ]
+        },
+        raw_kind:{
+            bg:IMG.bg_raw,face:IMG.face_happy,name:"原料长老",
+            text:"好孩子！坚守品质，才能做出最棒的面包！\n“勇者啊，你可知每一粒小麦都承载着大地的记忆。只有敬畏自然的馈赠，才能唤来面包的加护。”\n他似乎看穿了你的内心，递来一小撮星光面粉。",
+            options:[{text:"继续前进",next:"scene_mix"}],
+            effect:{kindness:1}
+        },
+        raw_normal:{
+            bg:IMG.bg_raw,face:IMG.face_cool,name:"原料长老",
+            text:"没错，豪士只选用天然优质原料。",
+            options:[{text:"继续前进",next:"scene_mix"}]
+        },
+        pre_fail_raw:{
+            bg:IMG.bg_raw,face:IMG.face_shock,name:"原料长老",
+            text:"你趁长老不注意，偷偷沾了一点面粉放进嘴里。瞬间，圣殿震动，纯净的食材之灵发出悲鸣。长老转过身，眼神中充满失望。",
+            options:[{text:"我...我只是想尝尝",next:"step_fail_raw"}]
+        },
+        step_fail_raw:{
+            bg:IMG.bg_raw,face:IMG.face_angry,name:"原料长老",
+            text:"“勇者啊，纯净是美味的基石。一旦信任崩塌，你便再也无法踏足这片圣地。”",
+            options:[{text:"……",next:"fail_raw"}]
+        },
+        fail_raw:{
+            bg:"失信.png",face:IMG.face_cool,name:"遗憾结局",
+            text:"【食材守护者的失信】\n你破坏了食材纯净，面包王国不再为你敞开大门。",
+            onEnter:()=>unlockEnding('raw')
+        },
+        scene_mix:{
+            bg:IMG.bg_mix,face:IMG.face_sweat,name:"搅拌大师",
+            text:"这里是调和工坊！我要把所有食材揉成完美的黄金面团。",
+            options:[
+                {text:"您的手法真专业，我要好好学习",next:"mix_kind",effect:{kindness:2}},
+                {text:"原来面团是这样做出来的",next:"mix_normal"},
+                {text:"不如我来乱搅一通试试？",next:"pre_fail_mix",effect:{weirdness:1}}
+            ]
+        },
+        mix_kind:{
+            bg:IMG.bg_mix,face:IMG.face_happy,name:"搅拌大师",
+            text:"太欣慰了！用心对待每一份面团，才能做出有灵魂的面包。\n“千百次揉压，不为力量，只为将心意揉进面团的每一寸。你看，这金色的漩涡便是魔法阵。”\n他张开双臂，搅拌缸内泛起柔和的光芒。",
+            options:[{text:"继续前进",next:"scene_ferment"}],
+            effect:{kindness:1}
+        },
+        mix_normal:{
+            bg:IMG.bg_mix,face:IMG.face_cool,name:"搅拌大师",
+            text:"搅拌是面包诞生的关键，力度和时间都要精准把控。",
+            options:[{text:"继续前进",next:"scene_ferment"}]
+        },
+        pre_fail_mix:{
+            bg:IMG.bg_mix,face:IMG.face_shock,name:"搅拌大师",
+            text:"你突然冲上前去胡乱搅动，黄金面团瞬间变得黏稠混乱。大师惊呼：“停下！魔法阵要被破坏了！”",
+            options:[{text:"来不及了...",next:"step_fail_mix"}]
+        },
+        step_fail_mix:{
+            bg:IMG.bg_mix,face:IMG.face_angry,name:"搅拌大师",
+            text:"“失去了调和之力，面团将归于混沌。你如此轻率，怎配得上匠人之名？”",
+            options:[{text:"……",next:"fail_mix"}]
+        },
+        fail_mix:{
+            bg:"混乱搅拌.png",face:IMG.face_angry,name:"遗憾结局",
+            text:"【混乱的搅拌师】\n你随意破坏工序，黄金面团的魔法彻底消散。",
+            onEnter:()=>unlockEnding('mix')
+        },
+        scene_ferment:{
+            bg:IMG.bg_ferment,face:IMG.face_cool,name:"发酵精灵",
+            text:"这里是发酵秘境！面团需要安静的环境慢慢苏醒，不能被打扰。",
+            options:[
+                {text:"我会守护这里的宁静",next:"fer_kind",effect:{kindness:2}},
+                {text:"发酵需要多长时间呢？",next:"fer_normal"},
+                {text:"面团怎么不动？我叫醒它！",next:"pre_fail_fer",effect:{weirdness:1}}
+            ]
+        },
+        fer_kind:{
+            bg:IMG.bg_ferment,face:IMG.face_happy,name:"发酵精灵",
+            text:"谢谢你的守护！耐心是面包最好的魔法。\n“在你看不到的微观世界里，万菌正在共舞。它们呼吸着蜜糖，吐出芬芳的咒语。”\n无数细小的光点围绕面团旋转，就像星之海洋。",
+            options:[{text:"继续前进",next:"scene_form"}],
+            effect:{kindness:1}
+        },
+        fer_normal:{
+            bg:IMG.bg_ferment,face:IMG.face_cool,name:"发酵精灵",
+            text:"豪士面包的发酵时间都是精准计算的，只为最佳口感。",
+            options:[{text:"继续前进",next:"scene_form"}]
+        },
+        pre_fail_fer:{
+            bg:IMG.bg_ferment,face:IMG.face_shock,name:"发酵精灵",
+            text:"你对着安静的面团大喊大叫，试图叫醒它。面团的呼吸骤然停止，精灵们四散奔逃。",
+            options:[{text:"我做了什么...",next:"step_fail_fer"}]
+        },
+        step_fail_fer:{
+            bg:IMG.bg_ferment,face:IMG.face_angry,name:"发酵精灵",
+            text:"“你惊醒了它们的梦。每一只菌灵都带着未完成的歌声离去了，面包将永远沉睡。”",
+            options:[{text:"……",next:"fail_fer"}]
+        },
+        fail_fer:{
+            bg:"破坏.png",face:IMG.face_angry,name:"遗憾结局",
+            text:"【急躁的破坏者】\n你惊扰了发酵魔法，面包的灵魂永远沉睡。",
+            onEnter:()=>unlockEnding('fer')
+        },
+        scene_form:{
+            bg:IMG.bg_form,face:IMG.face_cool,name:"塑形工匠",
+            text:"这里是塑形工坊！每一个面包都要有完美的形状。",
+            options:[
+                {text:"我会仔细学习塑形技巧",next:"form_kind",effect:{kindness:2}},
+                {text:"这些形状都好可爱呀",next:"form_normal"},
+                {text:"随便捏捏就好了吧？",next:"form_normal"}
+            ]
+        },
+        form_kind:{
+            bg:IMG.bg_form,face:IMG.face_happy,name:"塑形工匠",
+            text:"匠心精神就是对每一个细节的追求！\n“面包的形状即是它的品格。圆润者包容，长条者坚韧。每一刀划痕都是勇者的伤疤。”\n他轻抚面团，仿佛在雕刻一件圣物。",
+            options:[{text:"继续前进",next:"scene_bake"}],
+            effect:{kindness:1}
+        },
+        form_normal:{
+            bg:IMG.bg_form,face:IMG.face_cool,name:"塑形工匠",
+            text:"豪士面包的每一个形状都经过精心设计，兼顾美观与口感。",
+            options:[{text:"继续前进",next:"scene_bake"}]
+        },
+        scene_bake:{
+            bg:IMG.bg_bake,face:IMG.face_sweat,name:"烘焙大师",
+            text:"这里是炙烤殿堂！火候是面包风味的灵魂，必须时刻守护。",
+            options:[
+                {text:"我来帮您盯着火候",next:"minigame_bake",effect:{kindness:2}},
+                {text:"火候控制好难啊",next:"bake_normal"},
+                {text:"交给机器就好了吧？",next:"pre_fail_bake_machine",effect:{weirdness:1}}
+            ]
+        },
+        bake_normal:{
+            bg:IMG.bg_bake,face:IMG.face_cool,name:"烘焙大师",
+            text:"机器也需要人的守护，豪士的每一份面包都有人文温度。",
+            options:[
+                {text:"我还是来帮忙吧",next:"minigame_bake"},
+                {text:"继续前进",next:"pre_fail_bake_normal"}
+            ]
+        },
+        pre_fail_bake_machine:{
+            bg:IMG.bg_bake,face:IMG.face_shock,name:"烘焙大师",
+            text:"你按下全自动按钮，转身离开。突然，机器发出刺耳警报，温度失控了！",
+            options:[{text:"快关掉！",next:"step_fail_bake"}]
+        },
+        pre_fail_bake_normal:{
+            bg:IMG.bg_bake,face:IMG.face_shock,name:"烘焙大师",
+            text:"你觉得火候控制太麻烦，决定就这样继续前进。不久，一股焦糊味弥漫开来。",
+            options:[{text:"烤焦了...",next:"step_fail_bake"}]
+        },
+        pre_fail_bake_minigame:{
+            bg:IMG.bg_bake,face:IMG.face_sweat,name:"你",
+            text:"火苗猛地窜起，你没能及时控制住火候。炙烤殿堂陷入了火海。",
+            options:[{text:"不！",next:"step_fail_bake"}]
+        },
+        step_fail_bake:{
+            bg:IMG.bg_bake,face:IMG.face_angry,name:"烘焙大师",
+            text:"“火候是时间的艺术，失去了它，面包便只剩下灰烬的苦味。”",
+            options:[{text:"……",next:"fail_bake"}]
+        },
+        fail_bake:{
+            bg:"失温.png",face:IMG.face_angry,name:"遗憾结局",
+            text:"【失温的烘焙师】\n你放弃守护火候，所有面包都在黑暗中烤焦。",
+            onEnter:()=>unlockEnding('bake')
+        },
+        scene_cool:{
+            bg:IMG.bg_cool,face:IMG.face_cool,name:"冷却使者",
+            text:"这里是冷却圣坛！面包需要无菌环境自然冷却，不能触碰。",
+            options:[
+                {text:"我会守护无菌环境",next:"cool_kind",effect:{kindness:2}},
+                {text:"冷却需要多久呢？",next:"cool_normal"},
+                {text:"吹口气帮它降温吧",next:"pre_fail_cool",effect:{weirdness:1}}
+            ]
+        },
+        cool_kind:{
+            bg:IMG.bg_cool,face:IMG.face_happy,name:"冷却使者",
+            text:"洁净是美味的第一道防线！\n“高温褪去，面包正在完成最后的冥想。不洁的触碰会让魔法前功尽弃，请再耐心片刻。”\n寒气如薄纱笼罩，时间仿佛在此地停滞。",
+            options:[{text:"继续前进",next:"scene_metal"}],
+            effect:{kindness:1}
+        },
+        cool_normal:{
+            bg:IMG.bg_cool,face:IMG.face_cool,name:"冷却使者",
+            text:"豪士面包的冷却工艺严格遵循食品安全标准，确保每一口都安心。",
+            options:[{text:"继续前进",next:"scene_metal"}]
+        },
+        pre_fail_cool:{
+            bg:IMG.bg_cool,face:IMG.face_shock,name:"冷却使者",
+            text:"你凑近面包轻轻吹了一口气，想要帮它快点降温。使者脸色大变：“不！你带来了尘世的细菌！”",
+            options:[{text:"我不是故意的...",next:"step_fail_cool"}]
+        },
+        step_fail_cool:{
+            bg:IMG.bg_cool,face:IMG.face_angry,name:"冷却使者",
+            text:"“洁净是神圣的结界，你打破了平衡，美味将从这里开始腐败。”",
+            options:[{text:"……",next:"fail_cool"}]
+        },
+        fail_cool:{
+            bg:"洁癖.png",face:IMG.face_angry,name:"遗憾结局",
+            text:"【不洁的触碰】\n你破坏了无菌洁净，美味在诞生前就已变质。",
+            onEnter:()=>unlockEnding('cool')
+        },
+        scene_metal:{
+            bg:IMG.bg_metal,face:IMG.face_cool,name:"质检官",
+            text:"这里是质检中心！每一个面包都要通过严格的金属检测，确保安全。",
+            options:[
+                {text:"我会认真检查每一个面包",next:"metal_kind",effect:{kindness:2}},
+                {text:"检测好严格呀",next:"metal_normal"}
+            ]
+        },
+        metal_kind:{
+            bg:IMG.bg_metal,face:IMG.face_happy,name:"质检官",
+            text:"安全是豪士的第一准则！\n“冒险者，真正的试炼不是击败恶龙，而是扛住千万次平凡的审视。这些面包承载着无数家庭的餐桌。”\n他庄严地为你佩上一枚小小的质检勋章。",
+            options:[{text:"继续前进",next:"scene_pack"}],
+            effect:{kindness:1}
+        },
+        metal_normal:{
+            bg:IMG.bg_metal,face:IMG.face_cool,name:"质检官",
+            text:"豪士建立了全流程品控体系，只为给消费者最安心的产品。",
+            options:[{text:"继续前进",next:"scene_pack"}]
+        },
+        scene_pack:{
+            bg:IMG.bg_pack,face:IMG.face_cool,name:"包装师",
+            text:"这里是包装工坊！新鲜的面包需要密封包装锁住美味。",
+            options:[
+                {text:"我会小心包装每一份面包",next:"pack_kind",effect:{kindness:2}},
+                {text:"包装好精致呀",next:"pack_normal"}
+            ]
+        },
+        pack_kind:{
+            bg:IMG.bg_pack,face:IMG.face_happy,name:"包装师",
+            text:"用心包装，才能让美味抵达每一位消费者手中。\n“这是我最后的魔法——为面包穿上抵御时间的铠甲。愿它们跨越千山万水，仍能保持刚出炉时的笑容。”\n包装机发出温柔的嗡鸣，像一首安眠曲。",
+            options:[{text:"继续前进",next:"scene_storage"}],
+            effect:{kindness:1}
+        },
+        pack_normal:{
+            bg:IMG.bg_pack,face:IMG.face_cool,name:"包装师",
+            text:"豪士的包装既环保又能锁住面包的新鲜度。",
+            options:[{text:"继续前进",next:"scene_storage"}]
+        },
+        scene_storage:{
+            bg:IMG.bg_storage,face:IMG.face_cool,name:"仓库管理员",
+            text:"这里是面包仓库！所有面包都要按标准储存，等待送往千家万户。",
+            options:[
+                {text:"我会守护这些美味的面包",next:"store_kind",effect:{kindness:2}},
+                {text:"仓库好大呀",next:"store_normal"},
+                {text:"这么多面包，吃光算了！",next:"pre_fail_store",effect:{weirdness:1}}
+            ]
+        },
+        store_kind:{
+            bg:IMG.bg_storage,face:IMG.face_happy,name:"仓库管理员",
+            text:"每一份面包都要送到需要它的人手中，这才是真正的美味。",
+            options:[{text:"完成冒险",next:"end_normal"}],
+            effect:{kindness:1}
+        },
+        store_normal:{
+            bg:IMG.bg_storage,face:IMG.face_cool,name:"仓库管理员",
+            text:"豪士的仓储物流体系确保每一份面包都新鲜送达。",
+            options:[{text:"完成冒险",next:"end_normal"}]
+        },
+        pre_fail_store:{
+            bg:IMG.bg_storage,face:IMG.face_shock,name:"仓库管理员",
+            text:"你望着堆积如山的面包，终于忍不住开始大吃特吃。很快，仓库变得一片狼藉。",
+            options:[{text:"嗝...太好吃了",next:"step_fail_store"}]
+        },
+        step_fail_store:{
+            bg:IMG.bg_storage,face:IMG.face_angry,name:"仓库管理员",
+            text:"“面包是用来分享的幸福，你却独占了它。贪婪之人不配留在王国。”",
+            options:[{text:"……",next:"fail_store"}]
+        },
+        fail_store:{
+            bg:"贪婪.png",face:IMG.face_angry,name:"遗憾结局",
+            text:"【贪婪的暴食者】\n你只想占有美味，被面包王国永久驱逐。",
+            onEnter:()=>unlockEnding('store')
+        },
+        end_normal:{
+            bg:"普通结局.png",face:IMG.face_cool,name:"你",
+            text:"【透明工厂游记】\n你体验了一场梦幻的豪士面包诞生之旅。",
+            onEnter:()=>{
+                if(state.kindness >=15){
+                    unlockEnding('master');
+                }else{
+                    unlockEnding('normal');
+                }
+            }
+        }
+    };
+
+    document.getElementById('start-btn').addEventListener('click', function() {
+        startScreen.style.display = 'none';
+        gameStarted = true;
+        loadNode('start');
+    });
+
+    galleryBtn.addEventListener('click', function() {
+        if(!galleryBtn.classList.contains('disabled')){
+            openGallery();
+        }
+    });
+
+    galleryClose.addEventListener('click', function() {
+        galleryOverlay.style.display = 'none';
+    });
+
+    document.querySelectorAll('.gallery-btn-item').forEach(item => {
+        item.addEventListener('click', function() {
+            if(!this.classList.contains('locked')){
+                const ending = this.dataset.ending;
+                endingDetailImg.src = endingDetails[ending].img;
+                endingDetailDesc.textContent = endingDetails[ending].desc;
+                endingDetail.style.display = 'flex';
+                galleryOverlay.style.display = 'none';
+            }
+        });
+    });
+
+    endingDetailClose.addEventListener('click', function() {
+        endingDetail.style.display = 'none';
+    });
+
+    updateGalleryStatus();
+    updateCoinDisplay();
+})();
+</script>
+</body>
+</html>
